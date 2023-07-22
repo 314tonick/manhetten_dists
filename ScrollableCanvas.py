@@ -21,6 +21,7 @@ class ScrollableCanvas:
         self.last_id = 0
         
         self.binds = {}
+        self.__object_by_id = {}
         self.bind("<Button-4>", self._scroll)
         self.bind("<Button-5>", self._scroll)
         self.bind("<MouseWheel>", self._scroll)
@@ -59,34 +60,33 @@ class ScrollableCanvas:
 
         event.x += self.can.xview()[0] * (x2 - x1)
         event.y += self.can.yview()[0] * (y2 - y1)
+        funcs = []
         for func, id, x, y, width, height in self.binds.get(eventName, []):
             if x <= event.x <= x + width and y <= event.y <= y + height:
-                func(event)
+                funcs.append((id, func))
+        funcs.sort()
+        for id, func in funcs:
+            func(event)
     
     def bind(self, event, function):
         return self.bind_range(event, function, 0, 0, 2e18, 2e18)
 
     def bind_range(self, event, function, x, y, width, height):
         if event in self.binds:
-            self.binds[event].append((function, self.last_id, x, y, width, height))
+            self.binds[event].add((function, self.last_id, x, y, width, height))
         else:
-            self.binds[event] = [(function, self.last_id, x, y, width, height)]
+            self.binds[event] = {(function, self.last_id, x, y, width, height)}
             self.can.bind(event, lambda ev, eventName=event: self.__bind_event(eventName, ev))
+        self.__object_by_id[self.last_id] = (event, (function, self.last_id, x, y, width, height))
         self.last_id += 1
         return self.last_id - 1
 
     def unbind(self, id2):
-        name, obj = None, None
-        for event in self.binds:
-            if name is not None:
-                break
-            for func, id, x, y, width, height in self.binds[event]:
-                if id == id2:
-                    name, obj = event, (func, id, x, y, width, height)
-                    break
-        if name is None:
-            raise ValueError("Wrong parameter id: it is removed or isn't made")
-        self.binds[name].remove(obj)
+        if id2 in self.__object_by_id:
+            name, obj = self.__object_by_id.pop(id2)
+            self.binds[name].remove(obj)
+        else:
+            raise TclError("Bind with this id doesn't exists.")
 
 class ButtonSC:
     def __init__(self, master: ScrollableCanvas, bg=None, fg=None, font=None, text=None, command=None):
@@ -122,7 +122,7 @@ class ButtonSC:
             self.pos.clear()
 
     def place(self, x, y, width, height):
-        if self.pos:
+        if self.pos and (x, y, width, height) != self.placeInfo:
             self.destroy()
         self.placeInfo = (x, y, width, height)
         self.pos.append(self.can.create_rectangle(x, y, x + width, y + height, fill=self.bg))
@@ -137,6 +137,8 @@ class ButtonSC:
             return self.fg
         if key == "text":
             return self.text
+        if key == "font":
+            return self.font
         raise TclError("Bad option " + key)
     
     def __setitem__(self, key, value):
@@ -146,6 +148,8 @@ class ButtonSC:
             self.fg = value
         elif key == "text":
             self.text = value
+        elif key == "font":
+            self.font = value
         else:
             raise TclError("Bad option " + key)
         if self.pos:

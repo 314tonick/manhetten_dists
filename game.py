@@ -35,16 +35,16 @@ def cheat(ev=None):
     else:
         for i, j, in CELLS:
             if MODE == 0:
-                cheats.append(Button(field, font=FONT, bg="#f00", activebackground="#f00", activeforeground="#000", text="X", command=cheat))
+                cheats.append(Button(field, font=FONT_MAIN_SMALL, bg="#f00", activebackground="#f00", activeforeground="#000", text="X", command=cheat))
                 cheats[-1].place(relx=BTN_WIDTH * j + BTN_PAD * j + BTN_WIDTH / 4, rely=BTN_HEIGHT * i + BTN_PAD * i + BTN_HEIGHT / 4,
                             relwidth=BTN_WIDTH / 2, relheight=BTN_HEIGHT / 2)
             elif MODE == 1:
-                cheats.append(ButtonPro(field, fixwidth=50, fixheight=50, font=FONT, bg="#f00", activebackground="#f00", activeforeground="#000", text="X", command=cheat))
+                cheats.append(ButtonPro(field, fixwidth=50, fixheight=50, font=FONT_MAIN, bg="#f00", activebackground="#f00", activeforeground="#000", text="X", command=cheat))
                 btns[i][j].grid_forget()
                 cheats[-1].grid(row=i, column=j)
             elif MODE == 2:
-                cheats.append(ButtonSC(field, font=FONT, bg="#f00", fg="#000", command=cheat, text="X"))
-                cheats[-1].place(x=50 * j + 5 * j + 12.5, y=50 * i + 5 * i + 12.5, width=25, height=25)
+                cheats.append(ButtonSC(field, font=FONT_MAIN_SMALL, bg="#f00", fg="#000", command=cheat, text="X"))
+                cheats[-1].place(x=BTN_WIDTH * j + BTN_WIDTH / 10 * j + BTN_WIDTH / 4, y=BTN_HEIGHT * i + BTN_HEIGHT / 10 * i + BTN_HEIGHT / 4, width=BTN_WIDTH / 2, height=BTN_HEIGHT / 2)
 
 def choose(wid):
     if wid['text'] == "?":
@@ -81,7 +81,7 @@ def turn(i, j):
         return
     clearLastTurn()
     if coins < AVALIBLE_TURNS[CURRENT_TURN][0]:
-        wnd = Label(root, text="НЕДОСТАТОЧНО\nДЕНЕГ\nДЛЯ ХОДА", font=FONT_BOLD, bg="#fdd")
+        wnd = Label(root, text="НЕДОСТАТОЧНО\nДЕНЕГ\nДЛЯ ХОДА", font=FONT_BIG, bg="#fdd")
         wnd.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
         wnd.after(1000, lambda *args: wnd.destroy())
     else:
@@ -109,19 +109,9 @@ def turn(i, j):
                     text += "+"
             text += f"\nВ СУММЕ: {su} 🪙"
         if guessed > 0:
-            wnd = Label(root, text=text, font=FONT_BOLD, bg="#dfd")
+            wnd = Label(root, text=text, font=FONT_BIG, bg="#dfd")
             wnd.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
             wnd.after(2000, lambda *args: wnd.destroy())
-
-
-def moveUp(i, j):
-    btns[(i - 1) % HEIGHT][j].focus_set()
-def moveDown(i, j):
-    btns[(i + 1) % HEIGHT][j].focus_set()
-def moveLeft(i, j):
-    btns[i][(j - 1) % WIDTH].focus_set()
-def moveRight(i, j):
-    btns[i][(j + 1) % WIDTH].focus_set()
 
 def schemeStandart(dst):
     COLORS = {
@@ -190,17 +180,37 @@ def resizeField(ev):
 def startDistanceCounting(ev, i, j):
     global start_place
     start_place = (i, j)
-    btn_startplace.place(ev.x - 12.5, ev.y - 12.5, 25, 25)
+    btn_startplace.place(ev.x - BTN_WIDTH / 4, ev.y - BTN_HEIGHT / 4, BTN_WIDTH / 2, BTN_HEIGHT / 2)
 
 def showDistance(ev, i, j):
+    if start_place is None:
+        return
     btn_distance['text'] = abs(i - start_place[0]) + abs(j - start_place[1])
-    btn_distance.place(ev.x - 12.5, ev.y - 12.5, 25, 25)
+    btn_distance.place(ev.x - BTN_WIDTH / 4, ev.y - BTN_HEIGHT / 4, BTN_WIDTH / 2, BTN_HEIGHT / 2)
 
 def stopDistanceCounting():
     global start_place
     start_place = None
     btn_startplace.destroy(False)
     btn_distance.destroy(False)
+
+def changeScale(newWidth, newHeight):
+    global BTN_WIDTH, BTN_HEIGHT
+    if not 0 < newWidth < 250 or not 0 < newHeight < 250:
+        return
+    BTN_WIDTH = newWidth
+    BTN_HEIGHT = newHeight
+    FONT_MAIN = ("Consolas", BTN_HEIGHT * 7 // 10)
+    FONT_MAIN_SMALL = ("Consolas", BTN_HEIGHT * 7 // 10 // 2)
+    btn_startplace['font'] = FONT_MAIN_SMALL
+    btn_distance['font'] = FONT_MAIN_SMALL
+    for cheatButton in cheats:
+        cheatButton['font'] = FONT_MAIN_SMALL
+    for i in range(HEIGHT):
+        for j in range(WIDTH):
+            btns[i][j]['font'] = FONT_MAIN
+            btns[i][j].place(x=BTN_WIDTH * j + BTN_WIDTH / 10 * j, y=BTN_HEIGHT * i + BTN_HEIGHT / 10 * i, width=BTN_WIDTH, height=BTN_HEIGHT)
+    field.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
 
 images = {}
 RED, GREEN, YELLOW, BLUE, WHITE = "\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[0m"
@@ -209,25 +219,32 @@ RED, GREEN, YELLOW, BLUE, WHITE = "\033[31m", "\033[32m", "\033[33m", "\033[34m"
 # NUMB = int(input(f"Type a {GREEN}NUMBER{WHITE} of {RED}CELLS{WHITE}:\t"))
 # SCHEME = input(f"Type a {BLUE}SCHEME{WHITE}:\t").lower()
 # coins = int(input(f"Type a number of {YELLOW}COINS{WHITE}:\t"))
-# FONTSIZE = int(input(f"Type a suze of FONT:\t"))
 # MODE = input(f"Type a mode of view screen: (F)it or (S)croll or (C)anvas scroll\t").lower()
 WIDTH = 36
 HEIGHT = 20
 NUMB = 3
 SCHEME = "g"
 coins = 10
-FONTSIZE = 20
 MODE = "c"
+
+FONT_BIG = ("Consolas", 50)
+FONT_SMALL = ("Consolas", 25)
 if MODE == "f":
+    FONT_MAIN = ("Consolas", int(input(f"Type a size of FIELD FONT:\t")))
     MODE = 0
 elif MODE == "s":
+    FONT_MAIN = ("Consolas", 35)
+    print(f"{YELLOW}Warning: (S)croll mode with old ScrollableFrame is not supported, use (C)anvas mode instead of this.{WHITE}")
     MODE = 1
 elif MODE == "c":
+    FONT_MAIN = ("Consolas", 35)
     MODE = 2
 else:
     print(f"{RED}ERROR: MODE is not F/S/C")
     input()
     exit()
+FONT_MAIN_SMALL = ("Consolas", FONT_MAIN[1] // 2)
+
 CLOSED_COLOR = BgFg("#333", "#fff")
 CHOOSED_COLOR = BgFg("#777", "#fff")
 CELLS = []
@@ -258,58 +275,55 @@ info.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=0.1)
 if MODE == 0:
     field = Frame(fieldFr)
     field.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
+    BTN_PAD = 0.002
+    # x*WIDTH + btn_pad * WIDTH - btn_pad = 1
+    BTN_WIDTH = (1 - BTN_PAD * (WIDTH - 1)) / WIDTH
+    BTN_HEIGHT = (1 - BTN_PAD * (HEIGHT - 1)) / HEIGHT
 elif MODE == 1:
     fieldAll = ScrollableFrame(fieldFr)
     field = fieldAll.content
 else:
     field = ScrollableCanvas(fieldFr)
+    root.bind("<Control-Button-4>", lambda event: changeScale(BTN_WIDTH - 5, BTN_HEIGHT - 5))
+    root.bind("<Control-Button-5>", lambda event: changeScale(BTN_WIDTH + 5, BTN_HEIGHT + 5))
+    BTN_WIDTH = 50
+    BTN_HEIGHT = 50
 
 btns = []
-BTN_PAD = 0.002
-# x*WIDTH + btn_pad * WIDTH - btn_pad = 1
-BTN_WIDTH = (1 - BTN_PAD * (WIDTH - 1)) / WIDTH
-BTN_HEIGHT = (1 - BTN_PAD * (HEIGHT - 1)) / HEIGHT
-
-FONT = ("Consolas", FONTSIZE)
-FONT_BOLD = ("Consolas", FONTSIZE, "bold")
 
 if MODE == 2:
     start_place = None
-    btn_startplace = ButtonSC(field, "#ff9", "#000", FONT_BOLD)
-    btn_distance = ButtonSC(field, "#9f9", "#000", FONT_BOLD)
+    btn_startplace = ButtonSC(field, "#ff9", "#000", FONT_MAIN_SMALL)
+    btn_distance = ButtonSC(field, "#9f9", "#000", FONT_MAIN_SMALL)
     field.bind("<Button3-Motion>", lambda event: btn_distance.destroy(False))
     field.bind("<ButtonRelease-3>", lambda event: stopDistanceCounting())
+    field.can.bind("<Leave>", lambda event: stopDistanceCounting())
 for i in range(HEIGHT):
     btns.append([])
     for j in range(WIDTH):
         if MODE == 0:
-            btns[i].append(Button(field, font=FONT, text="?"))
+            btns[i].append(Button(field, font=FONT_MAIN, text="?"))
             btns[i][j].place(relx=BTN_WIDTH * j + BTN_PAD * j, rely=BTN_HEIGHT * i + BTN_PAD * i,
                             relwidth=BTN_WIDTH, relheight=BTN_HEIGHT)
         elif MODE == 1:
-            btns[i].append(ButtonPro(field, font=FONT, text="?", fixwidth=50, fixheight=50))
+            btns[i].append(ButtonPro(field, font=FONT_MAIN, text="?", fixwidth=50, fixheight=50))
             btns[i][j].grid(row=i, column=j)
         else:
-            btns[i].append(ButtonSC(field, font=FONT, text="?"))
-            btns[i][j].place(x=50 * j + 5 * j, y=50 * i + 5 * i, width=50, height=50)
+            btns[i].append(ButtonSC(field, font=FONT_MAIN, text="?"))
+            btns[i][j].place(x=BTN_WIDTH * j + BTN_WIDTH / 10 * j, y=BTN_HEIGHT * i + BTN_HEIGHT / 10 * i, width=BTN_WIDTH, height=BTN_HEIGHT)
             btns[i][j].bind("<Button3-Motion>", lambda event, _i=i, _j=j: showDistance(event, _i, _j))
             btns[i][j].bind("<ButtonPress-3>", lambda event, _i=i, _j=j: startDistanceCounting(event, _i, _j))
         CLOSED_COLOR.draw(btns[i][j])
         btns[i][j].bind("<Button-1>", lambda event, x=i, y=j: turn(x, y))
         btns[i][j].bind("<Control-Button-1>", lambda event, _i=i, _j=j: choose(btns[_i][_j]))
         btns[i][j].bind("<Button-2>", lambda event, _i=i, _j=j: choose(btns[_i][_j]))
-        btns[i][j].bind("<Return>", lambda event, x=i, y=j: re_color(x, y))
-        btns[i][j].bind("<Up>", lambda event, x=i, y=j: moveUp(x, y))
-        btns[i][j].bind("<Down>", lambda event, x=i, y=j: moveDown(x, y))
-        btns[i][j].bind("<Left>", lambda event, x=i, y=j: moveLeft(x, y))
-        btns[i][j].bind("<Right>", lambda event, x=i, y=j: moveRight(x, y))
 
 if MODE == 1:
     fieldAll.ready()
 elif MODE == 2:
     field.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
 
-btnCoins = Button(info, font=FONT)
+btnCoins = Button(info, font=FONT_BIG)
 btnCoins.place(relx=0.0, rely=0.0, relwidth=1/3, relheight=1.0)
 updateCoins(0)
 root.bind("<Control-Shift-A>", lambda *args: updateCoins(100))
@@ -321,7 +335,7 @@ turns = {}
 for turnName, infoTurn in AVALIBLE_TURNS.items():
     btn = Button(info)
     btn.place(relx=1/3 + (2/3) / len(AVALIBLE_TURNS) * len(turns), rely=0.0, relwidth=(2/3) / len(AVALIBLE_TURNS), relheight=2/3)
-    lbl = Label(info, text=f"{infoTurn[0]} 🪙", font=FONT)
+    lbl = Label(info, text=f"{infoTurn[0]} 🪙", font=FONT_SMALL)
     lbl.place(relx=1/3 + (2/3) / len(AVALIBLE_TURNS) * len(turns), rely=2/3, relwidth=(2/3) / len(AVALIBLE_TURNS), relheight=1/3)
     NOT_TURN_COLOR.draw(btn)
     NOT_TURN_COLOR.draw(lbl)
