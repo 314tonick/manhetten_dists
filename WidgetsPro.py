@@ -110,6 +110,9 @@ class EntryPro:
     def get(self):
         return self.get_text()
 
+    def destroy(self):
+        self.frame.destroy()
+
 class ButtonPro:
     def __init__(self, master=None, fixwidth=None, fixheight=None, **kwargs):
         if fixwidth is not None and 'width' in kwargs:
@@ -142,6 +145,9 @@ class ButtonPro:
     
     def __setitem__(self, key, value):
         self.button[key] = value
+    
+    def destroy(self):
+        self.button.destroy()
 
 
 if __name__ == '__main__':

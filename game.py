@@ -2,7 +2,10 @@
 from tkinter import *
 from random import randint
 from PIL import ImageTk, Image
+from ScrollableFrame import ScrollableFrame
+from WidgetsPro import ButtonPro
 from turns import AVALIBLE_TURNS
+from ScrollableCanvas import ScrollableCanvas, ButtonSC
 
 def get_dst(line, column):
     res = 2e9
@@ -24,20 +27,32 @@ class BgFg:
 def cheat(ev=None):
     if len(cheats) > 0:
         while len(cheats) > 0:
+            grid_info = cheats[-1].grid_info()
             cheats[-1].destroy()
             cheats.pop()
+            if MODE == 1:
+                print(grid_info['row'], grid_info['column'])
+                btns[grid_info['row']][grid_info['column']].grid(row=grid_info['row'], column=grid_info['column'])
     else:
         for i, j, in CELLS:
-            cheats.append(Button(field, font=FONT, bg="#f00", activebackground="#f00", activeforeground="#000", text="X", command=cheat))
-            cheats[-1].place(relx=BTN_WIDTH * j + BTN_PAD * j + BTN_WIDTH / 4, rely=BTN_HEIGHT * i + BTN_PAD * i + BTN_HEIGHT / 4,
-                         relwidth=BTN_WIDTH / 2, relheight=BTN_HEIGHT / 2)
+            if MODE == 0:
+                cheats.append(Button(field, font=FONT, bg="#f00", activebackground="#f00", activeforeground="#000", text="X", command=cheat))
+                cheats[-1].place(relx=BTN_WIDTH * j + BTN_PAD * j + BTN_WIDTH / 4, rely=BTN_HEIGHT * i + BTN_PAD * i + BTN_HEIGHT / 4,
+                            relwidth=BTN_WIDTH / 2, relheight=BTN_HEIGHT / 2)
+            elif MODE == 1:
+                cheats.append(ButtonPro(field, fixwidth=50, fixheight=50, font=FONT, bg="#f00", activebackground="#f00", activeforeground="#000", text="X", command=cheat))
+                btns[i][j].grid_forget()
+                cheats[-1].grid(row=i, column=j)
+            elif MODE == 2:
+                cheats.append(ButtonSC(field, font=FONT, bg="#f00", fg="#000", command=cheat, text="X"))
+                cheats.place(x=50 * j + 5 * j + 12.5, y=50 * i + 5 * i + 12.5, width=25, height=25)
 
-def choose(ev):
-    if ev.widget['text'] == "?":
-        if ev.widget['bg'] == CLOSED_COLOR.bg:
-            CHOOSED_COLOR.draw(ev.widget)
+def choose(wid):
+    if wid['text'] == "?":
+        if wid['bg'] == CLOSED_COLOR.bg:
+            CHOOSED_COLOR.draw(wid)
         else:
-            CLOSED_COLOR.draw(ev.widget)
+            CLOSED_COLOR.draw(wid)
 
 def re_color(i, j, fg=True):
     dst = get_dst(i, j)
@@ -54,6 +69,7 @@ def clearLastTurn():
         re_color(i, j, False)
 
 def turn(i, j):
+    print(i, j)
     global REWARD
 
     have = False
@@ -163,6 +179,8 @@ def updateImage(turn_):
     btn['image'] = images[turn_]
 
 def resizeField(ev):
+    if MODE != 0:
+        return
     fieldFr.update()
     w = fieldFr.winfo_width()
     h = fieldFr.winfo_height()
@@ -179,13 +197,15 @@ NUMB = int(input(f"Type a {GREEN}NUMBER{WHITE} of {RED}CELLS{WHITE}:\t"))
 SCHEME = input(f"Type a {BLUE}SCHEME{WHITE}:\t").lower()
 coins = int(input(f"Type a number of {YELLOW}COINS{WHITE}:\t"))
 FONTSIZE = int(input(f"Type a suze of FONT:\t"))
-MODE = input(f"Type a mode of view screen: (F)it or (S)croll\t").lower()
+MODE = input(f"Type a mode of view screen: (F)it or (S)croll or (C)anvas scroll\t").lower()
 if MODE == "f":
-    MODE = False
+    MODE = 0
 elif MODE == "s":
-    MODE = True
+    MODE = 1
+elif MODE == "c":
+    MODE = 2
 else:
-    print(f"{RED}ERROR: MODE is not F/S")
+    print(f"{RED}ERROR: MODE is not F/S/C")
     input()
     exit()
 CLOSED_COLOR = BgFg("#333", "#fff")
@@ -211,11 +231,20 @@ root.bind("<Control-Shift-C>", cheat)
 root.bind("<Control-Shift-S>", lambda ev: openAll())
 
 fieldFr = Frame(root)
-field = Frame(fieldFr)
 info = Frame(root)
-field.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
 fieldFr.place(relx=0.0, rely=0.1, relwidth=1.0, relheight=0.9)
 info.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=0.1)
+
+if MODE == 0:
+    field = Frame(fieldFr)
+    field.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
+elif MODE == 1:
+    fieldAll = ScrollableFrame(fieldFr)
+    field = fieldAll.content
+else:
+    field = ScrollableCanvas(fieldFr)
+    field.bind("<Button-1>", print)
+
 btns = []
 BTN_PAD = 0.002
 # x*WIDTH + btn_pad * WIDTH - btn_pad = 1
@@ -227,18 +256,30 @@ FONT_BOLD = ("Consolas", FONTSIZE, "bold")
 for i in range(HEIGHT):
     btns.append([])
     for j in range(WIDTH):
-        btns[i].append(Button(field, font=FONT, text="?"))
+        if MODE == 0:
+            btns[i].append(Button(field, font=FONT, text="?"))
+            btns[i][j].place(relx=BTN_WIDTH * j + BTN_PAD * j, rely=BTN_HEIGHT * i + BTN_PAD * i,
+                            relwidth=BTN_WIDTH, relheight=BTN_HEIGHT)
+        elif MODE == 1:
+            btns[i].append(ButtonPro(field, font=FONT, text="?", fixwidth=50, fixheight=50))
+            btns[i][j].grid(row=i, column=j)
+        else:
+            btns[i].append(ButtonSC(field, font=FONT, text="?"))
+            btns[i][j].place(x=50 * j + 5 * j, y=50 * i + 5 * i, width=50, height=50)
         CLOSED_COLOR.draw(btns[i][j])
-        btns[i][j].place(relx=BTN_WIDTH * j + BTN_PAD * j, rely=BTN_HEIGHT * i + BTN_PAD * i,
-                         relwidth=BTN_WIDTH, relheight=BTN_HEIGHT)
         btns[i][j].bind("<Button-1>", lambda event, x=i, y=j: turn(x, y))
-        btns[i][j].bind("<Control-Button-1>", choose)
-        btns[i][j].bind("<Button-2>", choose)
+        btns[i][j].bind("<Control-Button-1>", lambda event, _i=i, _j=j: choose(btns[_i][_j]))
+        btns[i][j].bind("<Button-3>", lambda event, _i=i, _j=j: choose(btns[_i][_j]))
         btns[i][j].bind("<Return>", lambda event, x=i, y=j: re_color(x, y))
         btns[i][j].bind("<Up>", lambda event, x=i, y=j: moveUp(x, y))
         btns[i][j].bind("<Down>", lambda event, x=i, y=j: moveDown(x, y))
         btns[i][j].bind("<Left>", lambda event, x=i, y=j: moveLeft(x, y))
         btns[i][j].bind("<Right>", lambda event, x=i, y=j: moveRight(x, y))
+
+if MODE == 1:
+    fieldAll.ready()
+elif MODE == 2:
+    field.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
 
 btnCoins = Button(info, font=FONT)
 btnCoins.place(relx=0.0, rely=0.0, relwidth=1/3, relheight=1.0)
