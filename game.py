@@ -27,11 +27,10 @@ class BgFg:
 def cheat(ev=None):
     if len(cheats) > 0:
         while len(cheats) > 0:
-            grid_info = cheats[-1].grid_info()
             cheats[-1].destroy()
             cheats.pop()
             if MODE == 1:
-                print(grid_info['row'], grid_info['column'])
+                grid_info = cheats[-1].grid_info()
                 btns[grid_info['row']][grid_info['column']].grid(row=grid_info['row'], column=grid_info['column'])
     else:
         for i, j, in CELLS:
@@ -45,7 +44,7 @@ def cheat(ev=None):
                 cheats[-1].grid(row=i, column=j)
             elif MODE == 2:
                 cheats.append(ButtonSC(field, font=FONT, bg="#f00", fg="#000", command=cheat, text="X"))
-                cheats.place(x=50 * j + 5 * j + 12.5, y=50 * i + 5 * i + 12.5, width=25, height=25)
+                cheats[-1].place(x=50 * j + 5 * j + 12.5, y=50 * i + 5 * i + 12.5, width=25, height=25)
 
 def choose(wid):
     if wid['text'] == "?":
@@ -69,7 +68,6 @@ def clearLastTurn():
         re_color(i, j, False)
 
 def turn(i, j):
-    print(i, j)
     global REWARD
 
     have = False
@@ -189,15 +187,37 @@ def resizeField(ev):
     hei = szOne * HEIGHT / h
     field.place(relx=(1 - wid) / 2, rely=(1 - hei) / 2, relwidth=wid, relheight=hei)
 
+def startDistanceCounting(ev, i, j):
+    global start_place
+    start_place = (i, j)
+    btn_startplace.place(ev.x - 12.5, ev.y - 12.5, 25, 25)
+
+def showDistance(ev, i, j):
+    btn_distance['text'] = abs(i - start_place[0]) + abs(j - start_place[1])
+    btn_distance.place(ev.x - 12.5, ev.y - 12.5, 25, 25)
+
+def stopDistanceCounting():
+    global start_place
+    start_place = None
+    btn_startplace.destroy(False)
+    btn_distance.destroy(False)
+
 images = {}
 RED, GREEN, YELLOW, BLUE, WHITE = "\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[0m"
-WIDTH = int(input(f"Type a {RED}WIDTH{WHITE}:\t"))
-HEIGHT = int(input(f"Type a {RED}HEIGHT{WHITE}:\t"))
-NUMB = int(input(f"Type a {GREEN}NUMBER{WHITE} of {RED}CELLS{WHITE}:\t"))
-SCHEME = input(f"Type a {BLUE}SCHEME{WHITE}:\t").lower()
-coins = int(input(f"Type a number of {YELLOW}COINS{WHITE}:\t"))
-FONTSIZE = int(input(f"Type a suze of FONT:\t"))
-MODE = input(f"Type a mode of view screen: (F)it or (S)croll or (C)anvas scroll\t").lower()
+# WIDTH = int(input(f"Type a {RED}WIDTH{WHITE}:\t"))
+# HEIGHT = int(input(f"Type a {RED}HEIGHT{WHITE}:\t"))
+# NUMB = int(input(f"Type a {GREEN}NUMBER{WHITE} of {RED}CELLS{WHITE}:\t"))
+# SCHEME = input(f"Type a {BLUE}SCHEME{WHITE}:\t").lower()
+# coins = int(input(f"Type a number of {YELLOW}COINS{WHITE}:\t"))
+# FONTSIZE = int(input(f"Type a suze of FONT:\t"))
+# MODE = input(f"Type a mode of view screen: (F)it or (S)croll or (C)anvas scroll\t").lower()
+WIDTH = 36
+HEIGHT = 20
+NUMB = 3
+SCHEME = "g"
+coins = 10
+FONTSIZE = 20
+MODE = "c"
 if MODE == "f":
     MODE = 0
 elif MODE == "s":
@@ -243,7 +263,6 @@ elif MODE == 1:
     field = fieldAll.content
 else:
     field = ScrollableCanvas(fieldFr)
-    field.bind("<Button-1>", print)
 
 btns = []
 BTN_PAD = 0.002
@@ -253,6 +272,13 @@ BTN_HEIGHT = (1 - BTN_PAD * (HEIGHT - 1)) / HEIGHT
 
 FONT = ("Consolas", FONTSIZE)
 FONT_BOLD = ("Consolas", FONTSIZE, "bold")
+
+if MODE == 2:
+    start_place = None
+    btn_startplace = ButtonSC(field, "#ff9", "#000", FONT_BOLD)
+    btn_distance = ButtonSC(field, "#9f9", "#000", FONT_BOLD)
+    field.bind("<Button3-Motion>", lambda event: btn_distance.destroy(False))
+    field.bind("<ButtonRelease-3>", lambda event: stopDistanceCounting())
 for i in range(HEIGHT):
     btns.append([])
     for j in range(WIDTH):
@@ -266,10 +292,12 @@ for i in range(HEIGHT):
         else:
             btns[i].append(ButtonSC(field, font=FONT, text="?"))
             btns[i][j].place(x=50 * j + 5 * j, y=50 * i + 5 * i, width=50, height=50)
+            btns[i][j].bind("<Button3-Motion>", lambda event, _i=i, _j=j: showDistance(event, _i, _j))
+            btns[i][j].bind("<ButtonPress-3>", lambda event, _i=i, _j=j: startDistanceCounting(event, _i, _j))
         CLOSED_COLOR.draw(btns[i][j])
         btns[i][j].bind("<Button-1>", lambda event, x=i, y=j: turn(x, y))
         btns[i][j].bind("<Control-Button-1>", lambda event, _i=i, _j=j: choose(btns[_i][_j]))
-        btns[i][j].bind("<Button-3>", lambda event, _i=i, _j=j: choose(btns[_i][_j]))
+        btns[i][j].bind("<Button-2>", lambda event, _i=i, _j=j: choose(btns[_i][_j]))
         btns[i][j].bind("<Return>", lambda event, x=i, y=j: re_color(x, y))
         btns[i][j].bind("<Up>", lambda event, x=i, y=j: moveUp(x, y))
         btns[i][j].bind("<Down>", lambda event, x=i, y=j: moveDown(x, y))

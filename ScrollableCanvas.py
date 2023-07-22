@@ -57,10 +57,10 @@ class ScrollableCanvas:
         self.can.update_idletasks()
         x1, y1, x2, y2 = self.can.bbox("all")
 
-        ex = event.x + self.can.xview()[0] * (x2 - x1)
-        ey = event.y + self.can.yview()[0] * (y2 - y1)
+        event.x += self.can.xview()[0] * (x2 - x1)
+        event.y += self.can.yview()[0] * (y2 - y1)
         for func, id, x, y, width, height in self.binds.get(eventName, []):
-            if x <= ex <= x + width and y <= ey <= y + height:
+            if x <= event.x <= x + width and y <= event.y <= y + height:
                 func(event)
     
     def bind(self, event, function):
@@ -108,9 +108,10 @@ class ButtonSC:
         if self.placeInfo is not None:
             self.binds[-1][2] = self.canvObj.bind_range(event, func, *self.placeInfo)
 
-    def destroy(self):
+    def destroy(self, raiseExceptions=True):
         if not self.pos:
-            raise TclError("Can't hide/destroy hidden button.")
+            if raiseExceptions:
+                raise TclError("Can't hide/destroy hidden button.")
         else:
             for i in range(len(self.binds)):
                 self.canvObj.unbind(self.binds[i][2])
