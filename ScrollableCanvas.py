@@ -42,17 +42,20 @@ class ScrollableCanvas:
             if (mov < 0 and event.widget.xview()[0] > 0.0) or (mov > 0 and event.widget.xview()[1] < 1.0):
                 event.widget.xview_scroll(mov, UNITS)
     
+    def getWidthHeight(self):
+        return self.can.bbox("all")[2:4]
+    
     def place(self, x=None, y=None, width=None, height=None, relx=None, rely=None, relwidth=None, relheight=None, **kwargs):
         self.frm.place(x=x, y=y, width=width, height=height, relx=relx, rely=rely, relwidth=relwidth, relheight=relheight, **kwargs)
-        self.can.configure(scrollregion=self.can.bbox("all"))
+        self.can.configure(scrollregion=(0, 0, *self.getWidthHeight()))
     
     def grid(self, row=None, column=None, rowspan=None, columnspan=None, **kwargs):
         self.frm.grid(row=row, column=column, rowspan=rowspan, columnspan=columnspan, **kwargs)
-        self.can.configure(scrollregion=self.can.bbox("all"))
+        self.can.configure(scrollregion=(0, 0, *self.getWidthHeight()))
 
     def pack(self, **kwargs):
         self.frm.pack(**kwargs)
-        self.can.configure(scrollregion=self.can.bbox("all"))
+        self.can.configure(scrollregion=(0, 0, *self.getWidthHeight()))
     
     def __bind_event(self, eventName, event):
         self.can.update_idletasks()
