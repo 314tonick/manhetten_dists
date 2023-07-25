@@ -7,7 +7,7 @@ from WidgetsPro import ButtonPro
 from turns import AVALIBLE_TURNS
 from ScrollableCanvas import ScrollableCanvas, ButtonSC
 
-def game(WIDTH, HEIGHT, NUMB, SCHEME, COINS, MODE):
+def game(WIDTH, HEIGHT, NUMB, SCHEME, coins, MODE, REWARDS, call_back, geometry=None):
     def get_dst(line, column):
         res = 2e9
         for l1, c1 in CELLS:
@@ -69,7 +69,7 @@ def game(WIDTH, HEIGHT, NUMB, SCHEME, COINS, MODE):
             re_color(i, j, False)
 
     def turn(i, j):
-        nonlocal REWARD
+        nonlocal reward_index
 
         have = False
         for i2, j2 in AVALIBLE_TURNS[CURRENT_TURN][1]:
@@ -93,26 +93,38 @@ def game(WIDTH, HEIGHT, NUMB, SCHEME, COINS, MODE):
                 column = j + j2
                 if 0 <= line < HEIGHT and 0 <= column < WIDTH and (btns[line][column]['bg'] == CLOSED_COLOR.bg or btns[line][column]['bg'] == CHOOSED_COLOR.bg):
                     guessed += re_color(line, column)
+            rews = []
+            for i in range(guessed):
+                rews.append(REWARDS[reward_index])
+                updateCoins(REWARDS[reward_index])
+                reward_index += 1
             if guessed == 1:
-                text = f"ВЫ УГАДАЛИ КЛЕТКУ\nИ ПОЛУЧИЛИ НАГРАДУ: {REWARD} 🪙"
-                updateCoins(REWARD)
-                REWARD += round(REWARD / 4)
+                text = f"ВЫ УГАДАЛИ КЛЕТКУ\nИ ПОЛУЧИЛИ НАГРАДУ: {rews[0]} 🪙"
             elif guessed > 1:
                 form = "ОК" if (11 < guessed % 100 < 20 or 5 <= guessed % 10 <= 9 or guessed % 10 == 0) else ("КУ" if guessed % 10 == 1 else "КИ")
                 text = f"ВЫ УГАДАЛИ {guessed} КЛЕТ{form}\nИ ПОЛУЧИЛИ НАГРАДЫ: "
                 su = 0
                 for i in range(guessed):
-                    text += str(REWARD)
-                    su += REWARD
-                    updateCoins(REWARD)
-                    REWARD += round(REWARD / 4)
+                    text += str(rews[i])
+                    su += rews[i]
                     if i != guessed - 1:
                         text += "+"
-                text += f"\nВ СУММЕ: {su} 🪙"
+                text += f"\nВ СУММЕ: {su}🪙"
             if guessed > 0:
                 wnd = Label(root, text=text, font=FONT_BIG, bg="#dfd")
                 wnd.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
                 wnd.after(2000, lambda *args: wnd.destroy())
+                if reward_index == len(REWARDS):
+                    end = Frame(root)
+                    Label(end, text=f"ВЫ НАШЛИ ВСЕ КЛЕТКИ\nИ ПОЛУЧИВ {coins}🪙\nВЫ ВЫИГРАЛИ!!!", font=FONT_BIG, bg="#191").place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
+                    Button(end, text="OK", font=FONT_SMALL, bg="#bbf", command=root.destroy).place(relx=0.35, rely=0.8, relwidth=0.2, relheight=0.1)
+                    end.after(2000, end.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0))
+            else:
+                if coins == 0:
+                    end = Frame(root)
+                    Label(end, text="У ВАС ЗАКОНЧИЛИСЬ МОНЕТЫ\nИ ВЫ ПРОИГРАЛИ!", font=FONT_BIG, bg="#911").place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
+                    Button(end, text="OK", font=FONT_SMALL, bg="#bbf", command=root.destroy).place(relx=0.35, rely=0.8, relwidth=0.2, relheight=0.1)
+                    end.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
 
     def schemeStandart(dst):
         COLORS = {
@@ -146,7 +158,7 @@ def game(WIDTH, HEIGHT, NUMB, SCHEME, COINS, MODE):
                 re_color(i, j)
 
     def updateCoins(num=0):
-        global coins
+        nonlocal coins
         coins += num
         btnCoins['text'] = f"{coins} 🪙"
 
@@ -213,6 +225,10 @@ def game(WIDTH, HEIGHT, NUMB, SCHEME, COINS, MODE):
                 btns[i][j].place(x=BTN_WIDTH * j + BTN_WIDTH / 10 * j, y=BTN_HEIGHT * i + BTN_HEIGHT / 10 * i, width=BTN_WIDTH, height=BTN_HEIGHT)
         field.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
 
+    def onDestoryRoot(event):
+        if event.widget == root:
+            call_back(reward_index == len(REWARDS), coins)
+
     images = {}
     FONT_BIG = ("Consolas", 50)
     FONT_SMALL = ("Consolas", 25)
@@ -249,7 +265,9 @@ def game(WIDTH, HEIGHT, NUMB, SCHEME, COINS, MODE):
         "g": schemeGreen
     }
     cheats = []
-    root = Tk()
+    root = Toplevel()
+    if geometry is not None:
+        root.geometry(geometry)
     root["bg"] = "#000"
     root.bind("<Control-Shift-C>", cheat)
     root.bind("<Control-Shift-S>", lambda ev: openAll())
@@ -271,7 +289,6 @@ def game(WIDTH, HEIGHT, NUMB, SCHEME, COINS, MODE):
         field = fieldAll.content
     else:
         field = ScrollableCanvas(fieldFr)
-        field.bind("<Button-1>", print)
         root.bind("<Control-Button-5>", lambda event: changeScale(BTN_WIDTH - 5, BTN_HEIGHT - 5))
         root.bind("<Control-Button-4>", lambda event: changeScale(BTN_WIDTH + 5, BTN_HEIGHT + 5))
         BTN_WIDTH = 50
@@ -332,10 +349,10 @@ def game(WIDTH, HEIGHT, NUMB, SCHEME, COINS, MODE):
         # updateImage(turnName)
         btn.bind("<Configure>", lambda event, turnName_=turnName: updateImage(turnName_))
     changeTurn("SINGLE")
-    REWARD = 5
+    reward_index = 0
     fieldFr.bind("<Configure>", resizeField)
-    root.mainloop()
-
+    root.bind("<Destroy>", onDestoryRoot)
+    
 if __name__ == "__main__":
     RED, GREEN, YELLOW, BLUE, WHITE = "\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[0m"
     # WIDTH = int(input(f"Type a {RED}WIDTH{WHITE}:\t"))
@@ -344,10 +361,14 @@ if __name__ == "__main__":
     # SCHEME = input(f"Type a {BLUE}SCHEME{WHITE}:\t").lower()
     # coins = int(input(f"Type a number of {YELLOW}COINS{WHITE}:\t"))
     # MODE = input(f"Type a mode of view screen: (F)it or (S)croll or (C)anvas scroll\t").lower()
-    WIDTH = 36
-    HEIGHT = 20
-    NUMB = 3
-    SCHEME = "g"
-    coins = 10
-    MODE = "c"
-    game(WIDTH, HEIGHT, NUMB, SCHEME, coins, MODE)
+    WIDTH1 = 36
+    HEIGHT1 = 20
+    NUMB1 = 3
+    SCHEME1 = "g"
+    coins1 = 10
+    MODE1 = "c"
+    REWARDS1 = [5, 7, 4]
+    ro = Tk()
+    game(WIDTH1, HEIGHT1, NUMB1, SCHEME1, coins1, MODE1, REWARDS1, print)
+    ro.mainloop()
+    
